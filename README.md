@@ -11,6 +11,15 @@ with a focus on the scientific literature.
 See our [recent 2024 paper](https://paper.wikicrow.ai) to see examples of PaperQA2's superhuman performance in scientific tasks like
 question answering, summarization, and contradiction detection.
 
+## Caddy Money beta sandbox
+
+This repository now also ships a smartphone-first MVP for the **Caddy Money** restricted-spend wallet.
+
+- `docker-compose.yml` orchestrates the Node/React stacks plus Postgres, Redis and Mailhog.
+- The API lives in [`api/`](api/) and exposes Fastify endpoints and a stubbed OpenAPI document under `/docs`.
+- The PWA client lives in [`web/`](web/) with French-first copy and Tailwind styling.
+- Run `docker compose up --build` to preview the beta experience on <http://localhost:5173> with the API on <http://localhost:3000>.
+
 <!--TOC-->
 
 - [Quickstart](#quickstart)
