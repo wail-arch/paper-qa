@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PayinMethod {
+  SEPA
+  CARD
+  TEST
+}
+
+enum PayinStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum RestrictedStatus {
+  ACTIVE
+  REDEEMED
+  EXPIRED
+  REVOKED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  CANCELLED
+}
+
+enum PayoutStatus {
+  REQUESTED
+  SENT
+  FAILED
+}
+
+model User {
+  id         String     @id @default(cuid())
+  email      String     @unique
+  name       String
+  kyc_status KycStatus  @default(PENDING)
+  created_at DateTime   @default(now())
+  issuances  RestrictedMoney[] @relation("Issuer")
+  receipts   RestrictedMoney[] @relation("Recipient")
+  payins     Payin[]
+  requests   Request[]        @relation("Requester")
+  approvals  Request[]        @relation("TargetIssuer")
+  notifications Notification[]
+}
+
+model Merchant {
+  id             String    @id @default(cuid())
+  legal_name     String
+  categories     String[]
+  is_whitelisted Boolean   @default(false)
+  payout_iban    String
+  lat            Float
+  lon            Float
+  created_at     DateTime  @default(now())
+  payments       Payment[]
+  payouts        Payout[]
+}
+
+model Payin {
+  id           String     @id @default(cuid())
+  user         User       @relation(fields: [user_id], references: [id])
+  user_id      String
+  method       PayinMethod
+  amount_cents Int
+  currency     String
+  status       PayinStatus
+  external_ref String?
+  created_at   DateTime   @default(now())
+}
+
+model RestrictedMoney {
+  id                 String          @id @default(cuid())
+  issuer             User            @relation("Issuer", fields: [issuer_id], references: [id])
+  issuer_id          String
+  recipient          User            @relation("Recipient", fields: [recipient_id], references: [id])
+  recipient_id       String
+  amount_cents       Int
+  remaining_cents    Int
+  currency           String
+  categories         String[]
+  merchant_whitelist Json?
+  expires_at         DateTime?
+  status             RestrictedStatus
+  created_at         DateTime        @default(now())
+  payments           Payment[]
+}
+
+model Payment {
+  id                 String           @id @default(cuid())
+  restricted_money   RestrictedMoney  @relation(fields: [restricted_money_id], references: [id])
+  restricted_money_id String
+  merchant           Merchant         @relation(fields: [merchant_id], references: [id])
+  merchant_id        String
+  amount_cents       Int
+  order_ref          String?
+  qr_nonce           String
+  created_at         DateTime         @default(now())
+}
+
+model Request {
+  id               String        @id @default(cuid())
+  requester        User          @relation("Requester", fields: [requester_id], references: [id])
+  requester_id     String
+  target_issuer    User          @relation("TargetIssuer", fields: [target_issuer_id], references: [id])
+  target_issuer_id String
+  amount_cents     Int
+  currency         String
+  categories       String[]
+  note             String?
+  status           RequestStatus
+  created_at       DateTime      @default(now())
+  decided_at       DateTime?
+}
+
+model Payout {
+  id           String        @id @default(cuid())
+  merchant     Merchant      @relation(fields: [merchant_id], references: [id])
+  merchant_id  String
+  amount_cents Int
+  currency     String
+  status       PayoutStatus
+  external_ref String?
+  created_at   DateTime      @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [user_id], references: [id])
+  user_id   String
+  type      String
+  payload   Json
+  is_read   Boolean  @default(false)
+  created_at DateTime @default(now())
+}
+
+model WebhookEvent {
+  id           String   @id
+  type         String
+  received_at  DateTime @default(now())
+  processed_at DateTime?
+  payload_hash String
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actor_type String
+  actor_id   String
+  action     String
+  entity_type String
+  entity_id  String
+  before     Json?
+  after      Json?
+  at         DateTime @default(now())
+}
+
